@@ -65,7 +65,8 @@ CREATE TABLE tempfile (
    createtime   INT UNSIGNED NOT NULL,
    classid      TINYINT UNSIGNED NOT NULL,
    dmid          SMALLINT UNSIGNED NOT NULL,
-   dkey           VARCHAR(255)
+   dkey           VARCHAR(255),
+   devids       VARCHAR(60)
 );
 
 # files marked for death when their key is overwritten.  then they get a new
@@ -126,7 +127,8 @@ CREATE TABLE device (
    INDEX   (status),
 
    mb_total   MEDIUMINT UNSIGNED,
-   mb_used    MEDIUMINT UNSIGNED
+   mb_used    MEDIUMINT UNSIGNED,
+   mb_asof    INT UNSIGNED
 
 );
 
