@@ -1,0 +1,48 @@
+FB will want:
+
+   Give me new $fh for a given key.  (which is for a domain)
+   Give me a path to a file to sendfile.  (from a key)
+
+Perl <-> mogilefs interface:
+
+   1) request new fid/path for a given key
+
+        < CREATE_OPEN domain=test&key=foo%27+sdf&class=<class_ident>
+        > ERR <errcode> <errstring>
+              nodb
+              foo
+        > OK <arg_length> fid=234&devid=342&path=/blah/foo/sdff
+        > ERR invalid_domain "Provided domain is not registered"
+
+   2) close fid (and the devid, path that was written to)
+
+        < CREATE_CLOSE domain=test&key=foo&fid=343&devid=34&path=/sdf/sf/sdf
+
+        -- fid and devid are totally opaque strings.  server just uses
+           them to verify the path and key.
+
+        -- it's possible two clients did a CREATE_OPEN on same key, got
+           diff fids (123 and 124), then 123 closes first and loses, since
+           key is now owned by 124, not 123.
+
+        > ERR expiredfid URL_encode("Expired file: another connection created the same file between your open and close")
+        > ERR bogus_devid "Devid doesn't correspond to path"
+        > ERR invalid_domain "Provided domain is not registered"
+
+
+   3) give string path to a given domainid+key
+
+        < GET_PATHS domain=test&key=FOOBAR
+        
+	> OK <arg_length> paths=<n>&path1=.....&path2=.....
+
+           (client should prefer them in order given)
+
+    4) delete a key
+
+        < DELETE domain=test&key=sdfsdfsdfsdf
+        > OK 0
+
+
+
+
