@@ -4,6 +4,9 @@ mogile database:
 
 mogilefsd:
 
+ * when storing files, also store 00003443.meta with info about file
+   - this is so we can restore the database if it totally crashes
+   - can also store checksumming info in the .meta file?
  * other jobs (replicator & delete, etc) can connect to frontend and do spud-like variable setting
  * fix request pipelining problem (make it an option, though?)
  * host dead cache:
