@@ -24,8 +24,12 @@ mogilefsd:
    - every N seconds, using usage file, update database free space columns
    - jobs update their in memory space cache every 60 seconds or so
    - new files go to devices depending on free space (weighted algorithm)
+   - new job to update mb_* columns
+   - new column, mb_asof for date last updated
+   - email alerts when mb_asof is old
  * checksum files (future)
  * FUSE interface (future)
+ * require InnoDB backend
 
 mogstored:
 
