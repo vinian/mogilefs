@@ -133,6 +133,9 @@ CREATE TABLE host (
    UNIQUE     (hostname),
    hostip     VARCHAR(15),
    UNIQUE     (hostip),
+   altip      VARCHAR(15),
+   UNIQUE     (altip),
+   altmask    VARCHAR(18),
 
    remoteroot  VARCHAR(60)
 );
