@@ -46,6 +46,16 @@ Perl <-> mogilefs interface:
         < DELETE domain=test&key=sdfsdfsdfsdf
         > OK 0
 
+        
+    5) get a list of domains and classes for them
 
+        < GET_DOMAINS
+        > OK domains=1&domain1=test&domain1classes=1&domain1class1name=alt&domain1class1mindevcount=2
 
+        -- this is a two level hash; there are N domains (taken from the
+           key 'domains') and their names are stored in 'domainX' where X is
+           in the range 1..N.
 
+        -- each domain has N classes (taken from 'domainXclasses');
+           each class has two keys in the form of 'domainXclassYname' and
+           'domainXclassYmindevcount' where Y is in the range of 1..N.
