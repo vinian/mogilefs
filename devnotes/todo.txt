@@ -1,3 +1,57 @@
- * have frontend do stats.. it can intercept commands like "?stats"
+mogile database:
+
+ * add UUID to device table
+
+mogilefsd:
+
  * other jobs (replicator & delete, etc) can connect to frontend and do spud-like variable setting
  * fix request pipelining problem (make it an option, though?)
+ * host dead cache:
+   - when any jobs notices a mogstored state change, send to parent
+   - parent rebroadcasts to kids, so they share info
+ * reaper job
+   - model after replicator
+   - looks for devices marked 'dead' (not down, must be dead)
+     + remove files from file_on
+     + update devcount in file table
+ * UDP between peers for jobs to cross-communicate
+   - in conf file, "peers: 10.x.y.z:6001, 10.a.b.c:6001"
+ * running fs verifier that makes sure UUIDs from mogstored matches database
+   - if a host fails verification, mark it as down
+   - configurable "verify time" (default 300 seconds)
+   - over 300 seconds, verify another device every N seconds (300/X = N, X = number of devices)
+ * rebalancer job (future)
+   - moves files around to devices with less files
+ * free space weighting
+   - every N seconds, using usage file, update database free space columns
+   - jobs update their in memory space cache every 60 seconds or so
+   - new files go to devices depending on free space (weighted algorithm)
+ * checksum files (future)
+ * FUSE interface (future)
+
+mogstored:
+
+ * support configuration files
+ * allow OPTIONS request
+   - include "Date: <gmt date>" header
+ * run usage file creator in different thread
+ * smartd dump just like usage file
+ * fsinfo dump
+   - include UUID of fs
+   - run in new thread (with usage?)
+   - mount -P to get fs types
+
+mogadm:
+
+ * example commands:
+   - check
+   - <host> add disk <disk>
+   - <host> down disk <disk>
+   - <host> kill disk <disk>
+   - <host> down
+   - <host> up
+
+moginit
+
+ * create new mogilefs database
+ * perform database upgrades
