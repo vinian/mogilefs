@@ -127,6 +127,7 @@ CREATE TABLE host (
 
    status     ENUM('alive','dead','down'),
    http_port  MEDIUMINT UNSIGNED DEFAULT 7500,
+   http_get_port MEDIUMINT UNSIGNED,
 
    hostname   VARCHAR(40),
    UNIQUE     (hostname),
