@@ -26,7 +26,7 @@ CREATE TABLE class (
       PRIMARY KEY (dmid,classid),
       classname     VARCHAR(50),
       UNIQUE      (dmid,classname),
-      mindevcount   TINYINT UNSIGNED NOT NULL,
+      mindevcount   TINYINT UNSIGNED NOT NULL
 );
 
 # the length field is only here for easy verifications of content
@@ -126,6 +126,7 @@ CREATE TABLE host (
    PRIMARY KEY (hostid),
 
    status     ENUM('alive','dead','down'),
+   http_port  MEDIUMINT UNSIGNED DEFAULT 7500,
 
    hostname   VARCHAR(40),
    UNIQUE     (hostname),
