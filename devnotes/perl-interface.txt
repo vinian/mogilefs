@@ -14,6 +14,9 @@ Perl <-> mogilefs interface:
         > OK <arg_length> fid=234&devid=342&path=/blah/foo/sdff
         > ERR invalid_domain "Provided domain is not registered"
 
+        'key' may be optional, in which an anonymous file (not in
+          namespace is returned).  essentially a temp/spool file.
+
    2) close fid (and the devid, path that was written to)
 
         < CREATE_CLOSE domain=test&key=foo&fid=343&devid=34&path=/sdf/sf/sdf

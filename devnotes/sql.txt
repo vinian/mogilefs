@@ -43,7 +43,7 @@ CREATE TABLE class (
 # the application can recreate it from its original)
 DROP TABLE IF EXISTS file;
 CREATE TABLE file (
-   fid          INT UNSIGNED NOT NULL AUTO_INCREMENT,
+   fid          INT UNSIGNED NOT NULL,
    PRIMARY KEY  (fid),
 
    dmid          SMALLINT UNSIGNED NOT NULL,
@@ -55,6 +55,17 @@ CREATE TABLE file (
    classid       TINYINT UNSIGNED NOT NULL,
    devcount      TINYINT UNSIGNED NOT NULL,
    INDEX devcount (dmid,classid,devcount)
+);
+
+DROP TABLE IF EXISTS tempfile;
+CREATE TABLE tempfile (
+   fid          INT UNSIGNED NOT NULL AUTO_INCREMENT,
+   PRIMARY KEY  (fid),
+
+   createtime   INT UNSIGNED NOT NULL,
+   classid      TINYINT UNSIGNED NOT NULL,
+   dmid          SMALLINT UNSIGNED NOT NULL,
+   dkey           VARCHAR(255)
 );
 
 # files marked for death when their key is overwritten.  then they get a new
