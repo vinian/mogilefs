@@ -17,6 +17,20 @@ Perl <-> mogilefs interface:
         'key' may be optional, in which an anonymous file (not in
           namespace is returned).  essentially a temp/spool file.
 
+        optional request key:  'multi_dest=1' signals that server should
+        reply not with keys "devid" and "path" but instead with:
+
+             dev_count=3
+             devid_1=10
+             devid_2=17
+             devid_3=26
+             path_1=http://host1:7500/dev10/...
+             path_2=http://host2:7500/dev17/...
+             path_3=http://host3:7500/dev26/...
+
+        .. that way if the server unknowingly gave the client a down storage node,
+        the client can immediately try somewhere else.
+
    2) close fid (and the devid, path that was written to)
 
         < CREATE_CLOSE domain=test&key=foo&fid=343&devid=34&path=/sdf/sf/sdf
