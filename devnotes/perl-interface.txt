@@ -59,3 +59,30 @@ Perl <-> mogilefs interface:
         -- each domain has N classes (taken from 'domainXclasses');
            each class has two keys in the form of 'domainXclassYname' and
            'domainXclassYmindevcount' where Y is in the range of 1..N.
+
+           
+    6) create a new domain on the fly
+    
+        < CREATE_DOMAIN domain=mynewdomain
+        > OK domain=mynewdomain
+
+        -- returns the domain you just created as the only response value
+
+
+    7) create a new class
+
+        < CREATE_CLASS domain=mynewdomain&class=theclass&mindevcount=2
+        > OK domain=mynewdomain&class=theclass&mindevcount=2
+
+        -- creates a new class under the domain you specify named 'class' with
+           the minimum device replication count of 'mindevcount'
+
+
+    8) updates a class's minimum device replica count
+
+        < UPDATE_CLASS domain=mynewdomain&class=theclass&mindevcount=3
+        > OK domain=mynewdomain&class=theclass&mindevcount=3
+
+        -- same as create_class except it overwrites the mindevcount of the class
+           you are specifying.  useful if you want to change the replica count
+           for a class.
