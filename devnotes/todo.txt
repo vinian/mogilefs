@@ -1,0 +1,3 @@
+ * have frontend do stats.. it can intercept commands like "?stats"
+ * other jobs (replicator & delete, etc) can connect to frontend and do spud-like variable setting
+ * fix request pipelining problem (make it an option, though?)
