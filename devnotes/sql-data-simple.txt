@@ -1,4 +1,4 @@
-INSERT INTO host SET hostid=1, status='alive', hostname='localhost, hostip='127.0.0.1', remoteroot='/var/mogilefs';
+INSERT INTO host SET hostid=1, status='alive', hostname='localhost', hostip='127.0.0.1', remoteroot='/var/mogilefs';
 
 INSERT INTO device SET devid=1, hostid=1, status='alive';
 INSERT INTO device SET devid=2, hostid=1, status='alive';
