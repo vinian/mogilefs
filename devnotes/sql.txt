@@ -78,6 +78,16 @@ CREATE TABLE file_to_delete (
    PRIMARY KEY (fid)
 );
 
+# if the replicator notices that a fid has no sources, that file gets inserted
+# into the unreachable_fids table.  it is up to the application to actually
+# handle fids stored in this table.
+DROP TABLE IF EXISTS unreachable_fids;
+CREATE TABLE unreachable_fids (
+   fid        INT UNSIGNED NOT NULL,
+   lastupdate INT UNSIGNED NOT NULL,
+   PRIMARY KEY (fid),
+   INDEX (lastupdate)
+);
 
 # what files are on what devices?  (most likely physical devices,
 # as logical devices of RAID arrays would be costly, and mogilefs
