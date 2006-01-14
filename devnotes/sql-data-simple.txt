@@ -1,8 +1,0 @@
-INSERT INTO host SET hostid=1, status='alive', hostname='localhost', hostip='127.0.0.1', remoteroot='/var/mogilefs';
-
-INSERT INTO device SET devid=1, hostid=1, status='alive';
-INSERT INTO device SET devid=2, hostid=1, status='alive';
-INSERT INTO device SET devid=3, hostid=1, status='alive';
-
-INSERT INTO domain SET dmid=1, namespace='test';
-INSERT INTO class SET dmid=1, classid=1, classname='normal', mindevcount=2;
