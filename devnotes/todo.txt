@@ -7,11 +7,6 @@ mogilefsd:
  * when storing files, also store 00003443.meta with info about file
    - this is so we can restore the database if it totally crashes
    - can also store checksumming info in the .meta file?
- * other jobs (replicator & delete, etc) can connect to frontend and do spud-like variable setting
- * fix request pipelining problem (make it an option, though?)
- * host dead cache:
-   - when any jobs notices a mogstored state change, send to parent
-   - parent rebroadcasts to kids, so they share info
  * UDP between peers for jobs to cross-communicate
    - in conf file, "peers: 10.x.y.z:6001, 10.a.b.c:6001"
  * running fs verifier that makes sure UUIDs from mogstored matches database
@@ -43,17 +38,3 @@ mogstored:
    - run in new thread (with usage?)
    - mount -P to get fs types
 
-mogadm:
-
- * example commands:
-   - check
-   - <host> add disk <disk>
-   - <host> down disk <disk>
-   - <host> kill disk <disk>
-   - <host> down
-   - <host> up
-
-moginit
-
- * create new mogilefs database
- * perform database upgrades
