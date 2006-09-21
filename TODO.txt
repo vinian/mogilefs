@@ -1,0 +1,21 @@
+* let callers special immutable=1 on get_paths
+  http://rt.livejournal.org/Ticket/Display.html?id=54
+
+* slave support
+  http://rt.livejournal.org/Ticket/Display.html?id=55
+
+* Re: bugs in PRINT/_write and do_request (fwd)
+  http://rt.livejournal.org/Ticket/Display.html?id=325
+
+* parallel write-out to multiple mogstoreds
+  http://rt.livejournal.org/Ticket/Display.html?id=351
+
+* device readonly state does not respect host state
+  http://rt.livejournal.org/Ticket/Display.html?id=2373
+
+* Make mogstored handle readonly devices gracefully
+  http://rt.livejournal.org/Ticket/Display.html?id=2451
+
+* Mogstored syslog
+  http://rt.livejournal.org/Ticket/Display.html?id=2452
+
