@@ -22,3 +22,6 @@
 * pid files and USR1 for graceful shutdown
   http://rt.livejournal.org/Ticket/Display.html?id=2826
 
+* split error() calls in MogileFS::Util into debug(), info(), etc.
+  http://rt.livejournal.org/Ticket/Display.html?id=2829
+
