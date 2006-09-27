@@ -19,3 +19,6 @@
 * Mogstored syslog
   http://rt.livejournal.org/Ticket/Display.html?id=2452
 
+* pid files and USR1 for graceful shutdown
+  http://rt.livejournal.org/Ticket/Display.html?id=2826
+
