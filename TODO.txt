@@ -25,3 +25,6 @@
 * split error() calls in MogileFS::Util into debug(), info(), etc.
   http://rt.livejournal.org/Ticket/Display.html?id=2829
 
+* mogdbsetup should only create innodb tables
+  http://rt.livejournal.org/Ticket/Display.html?id=2832
+
