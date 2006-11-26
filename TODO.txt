@@ -31,3 +31,15 @@
 * mogstored should be robust against people starting it without mounting underlying devices
   http://rt.livejournal.org/Ticket/Display.html?id=3055
 
+* perlbal:  wrong HTTP status code for read-only filesystem
+  http://rt.livejournal.org/Ticket/Display.html?id=3174
+
+* mogile should make dead devices go away when no files are on them?
+  http://rt.livejournal.org/Ticket/Display.html?id=3175
+
+* reaper is broken.  need to update to file_to_replicate table.
+  http://rt.livejournal.org/Ticket/Display.html?id=3176
+
+* readonly devices don't get get_paths traffic?
+  http://rt.livejournal.org/Ticket/Display.html?id=3177
+
