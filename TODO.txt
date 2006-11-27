@@ -37,9 +37,9 @@
 * mogile should make dead devices go away when no files are on them?
   http://rt.livejournal.org/Ticket/Display.html?id=3175
 
-* reaper is broken.  need to update to file_to_replicate table.
-  http://rt.livejournal.org/Ticket/Display.html?id=3176
-
 * readonly devices don't get get_paths traffic?
   http://rt.livejournal.org/Ticket/Display.html?id=3177
+
+* test new reaper
+  http://rt.livejournal.org/Ticket/Display.html?id=3179
 
