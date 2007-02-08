@@ -25,9 +25,6 @@
 * split error() calls in MogileFS::Util into debug(), info(), etc.
   http://rt.livejournal.org/Ticket/Display.html?id=2829
 
-* mogdbsetup should only create innodb tables
-  http://rt.livejournal.org/Ticket/Display.html?id=2832
-
 * mogstored should be robust against people starting it without mounting underlying devices
   http://rt.livejournal.org/Ticket/Display.html?id=3055
 
