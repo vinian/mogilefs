@@ -40,3 +40,6 @@
 * test new reaper
   http://rt.livejournal.org/Ticket/Display.html?id=3179
 
+* 
+  http://rt.livejournal.org/Ticket/Display.html?id=3468
+
