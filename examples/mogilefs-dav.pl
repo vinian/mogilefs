@@ -42,6 +42,7 @@ use lib 'devel/mogilefs/api/perl/lib';
 use base 'Filesys::Virtual';
 
 use Fcntl qw(:mode);
+use LWP::Simple;
 use MogileFS::Client;
 use Tie::Handle::HTTP;
 
@@ -51,7 +52,7 @@ sub new {
 
     my $mogclient = MogileFS::Client->new(
         hosts => ['127.0.0.1:7001'],
-        domain => "danga.com::lj",
+        domain => "filepaths",
     );
 
     die unless $mogclient;
@@ -67,15 +68,30 @@ sub open_write {
     my $self = shift;
     my $path = shift;
 
-    my $handle = $self->mogclient->new_file($path, 'temp', 1024);
-    warn "Handle bad!!!!" unless $handle;
+    open(my $handle, "+>", undef) or die("Couldn't open a tempfile?: $!");
+
+    # Look at me, I'm graham barr!
+    *{$handle} = \$path;
+
     return $handle;
 }
 
 sub close_write {
     my $self = shift;
     my $handle = shift;
+
+    my $size = (stat($handle))[7];
+
+    my $path = ${*{$handle}{SCALAR}};
+    my $mog_handle = $self->mogclient->new_file($path, 'temp', $size);
+
+    seek($handle, 0, 0) or die("Couldn't seek to 0");
+
+    while (sysread $handle, my $buffer, 1024) {
+        print $mog_handle $buffer;
+    }
     close $handle;
+    close $mog_handle;
 }
 
 sub open_read {
@@ -134,6 +150,9 @@ sub stat {
     my @paths = $mogclient->get_paths($path);
 
     if (@paths) {
+        if (my ($content_type, $document_length, $modified_time, $expires, $server) = head($paths[0])) {
+            return ($$, 0, MODE_FILE, 1, 0, 0, undef, $document_length, time, $modified_time, $^T, 512, 512);
+        }
         return ($$, 0, MODE_FILE, 1, 0, 0, undef, 1024, time, $^T, $^T, 512, 512);
     }
 
@@ -184,12 +203,27 @@ sub test {
         'd' => sub {
             return S_ISDIR($stat[2]);
         },
+        'r' => sub {
+            return 1;
+        },
     };
 
     return $tests->{$test}->()
         if exists $tests->{$test};
 
     warn "No test defined for $test on file $path\n";
+}
+
+sub cwd {
+
+}
+
+sub chdir {
+
+}
+
+sub delete {
+
 }
 
 1;
