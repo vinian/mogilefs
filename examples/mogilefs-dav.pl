@@ -43,14 +43,16 @@ use base 'Filesys::Virtual';
 
 use Fcntl qw(:mode);
 use LWP::Simple;
-use MogileFS::Client;
+use MogileFS::Client_FilePaths;
 use Tie::Handle::HTTP;
 
 sub new {
     my $class = shift;
-    my $self = bless {}, (ref $class || $class);
+    my $self = bless {
+        cwd => '/',
+    }, (ref $class || $class);
 
-    my $mogclient = MogileFS::Client->new(
+    my $mogclient = MogileFS::Client_FilePaths->new(
         hosts => ['127.0.0.1:7001'],
         domain => "filepaths",
     );
@@ -66,7 +68,7 @@ sub mogclient { return $_[0]->{mogclient}; }
 
 sub open_write {
     my $self = shift;
-    my $path = shift;
+    my $path = $self->_fixup_path(shift);
 
     open(my $handle, "+>", undef) or die("Couldn't open a tempfile?: $!");
 
@@ -83,7 +85,14 @@ sub close_write {
     my $size = (stat($handle))[7];
 
     my $path = ${*{$handle}{SCALAR}};
-    my $mog_handle = $self->mogclient->new_file($path, 'temp', $size);
+    my $mog_handle = $self->mogclient->new_file($path, 'temp', $size,
+                                                {
+                                                    plugin_args => {
+                                                                    'meta.keys' => 1,
+                                                                    'meta.key0' => 'mtime',
+                                                                    'meta.value0' => scalar(time),
+                                                                    },
+                                                });
 
     seek($handle, 0, 0) or die("Couldn't seek to 0");
 
@@ -96,7 +105,7 @@ sub close_write {
 
 sub open_read {
     my $self = shift;
-    my $path = shift;
+    my $path = $self->_fixup_path(shift);
 
     my @paths = $self->mogclient->get_paths($path);
 
@@ -116,15 +125,15 @@ sub close_read {
 
 sub list {
     my $self = shift;
-    my $path = shift;
+    my $path = $self->_fixup_path(shift);
 
-    my $listing = $self->mogclient->list_directory($path);
+    my @listing = $self->mogclient->list($path);
 
-    return keys %$listing if $listing;
+    return unless @listing;
 
-    return () if $path eq '/';
+    my @files = map {$_->{name}} @listing;
 
-    return;
+    return @files;
 }
 
 my @dir_stat = (
@@ -143,7 +152,7 @@ sub MODE_FILE () { S_IFREG | S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S
 
 sub stat {
     my $self = shift;
-    my $path = shift;
+    my $path = $self->_fixup_path(shift);
 
     my $mogclient = $self->mogclient;
 
@@ -156,9 +165,9 @@ sub stat {
         return ($$, 0, MODE_FILE, 1, 0, 0, undef, 1024, time, $^T, $^T, 512, 512);
     }
 
-    my $listing = $mogclient->list_directory($path);
+    my @listing = $mogclient->list($path);
 
-    if ($listing || $path eq '/') {
+    if (scalar(@listing) || $path eq '/') {
         return ($$, 0, MODE_DIR, 1, 0, 0, undef, 1024, time, $^T, $^T, 512, 512);
     }
 
@@ -184,7 +193,9 @@ EOT
 
 sub test {
     my $self = shift;
-    my ($test, $path) = @_;
+    my $test = shift;
+    my $path = $self->_fixup_path(shift);
+    warn "Test: $test on $path\n" if 0;
 
     my @stat = $self->stat($path);
 
@@ -208,22 +219,49 @@ sub test {
         },
     };
 
-    return $tests->{$test}->()
-        if exists $tests->{$test};
+    if (exists $tests->{$test}) {
+        my $result = $tests->{$test}->();
+        warn "Result: $result\n" if 0;
+        return $result;
+    }
 
     warn "No test defined for $test on file $path\n";
 }
 
 sub cwd {
-
+    my $self = shift;
+    my $cwd = $self->{cwd};
+    return $cwd;
 }
 
 sub chdir {
-
+    my $self = shift;
+    my $path = shift;
+    return $self->{cwd} = $path;
 }
 
 sub delete {
+    my $self = shift;
+    my $path = $self->_fixup_path(shift);
 
+    $self->mogclient->delete($path);
+}
+
+sub _fixup_path {
+    my $self = shift;
+    my $path = shift;
+
+    unless (defined $path) {
+        $path = '';
+    }
+
+    if ($path =~ m!^/!) {
+        return $path;
+    }
+
+    my $cwd = $self->{cwd};
+    $cwd =~ s!/*$!/!;
+    return "${cwd}${path}";
 }
 
 1;
