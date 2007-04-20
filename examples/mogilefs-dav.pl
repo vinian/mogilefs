@@ -37,13 +37,14 @@ package Filesys::Virtual::MogileFS;
 use strict;
 use warnings;
 
-use lib 'devel/mogilefs/api/perl/lib';
+use lib 'cvs/mogilefs/api/perl/MogileFS-Client/lib';
+use lib 'cvs/mogilefs/api/perl/MogileFS-Client-FilePaths/lib';
 
 use base 'Filesys::Virtual';
 
 use Fcntl qw(:mode);
 use LWP::Simple;
-use MogileFS::Client_FilePaths;
+use MogileFS::Client::FilePaths;
 use Tie::Handle::HTTP;
 
 sub new {
@@ -52,7 +53,7 @@ sub new {
         cwd => '/',
     }, (ref $class || $class);
 
-    my $mogclient = MogileFS::Client_FilePaths->new(
+    my $mogclient = MogileFS::Client::FilePaths->new(
         hosts => ['127.0.0.1:7001'],
         domain => "filepaths",
     );
@@ -87,11 +88,9 @@ sub close_write {
     my $path = ${*{$handle}{SCALAR}};
     my $mog_handle = $self->mogclient->new_file($path, 'temp', $size,
                                                 {
-                                                    plugin_args => {
-                                                                    'meta.keys' => 1,
-                                                                    'meta.key0' => 'mtime',
-                                                                    'meta.value0' => scalar(time),
-                                                                    },
+                                                    meta => {
+                                                                mtime => scalar(time),
+                                                            },
                                                 });
 
     seek($handle, 0, 0) or die("Couldn't seek to 0");
