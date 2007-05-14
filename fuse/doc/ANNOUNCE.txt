@@ -1,0 +1,30 @@
+From acme@astray.com Mon May 14 17:29:14 2007
+Date: Mon, 14 May 2007 14:06:51 +0100
+From: Leon Brocard <acme@astray.com>
+To: mogilefs@lists.danga.com
+Subject: mogilefs & fuse
+
+There's been some talk of MogileFS and FUSE recently, which allows you
+to mount MogileFS under Linux (and other OSes) as a network share.
+
+I've attached a Perl script which makes this work. If someone wants to
+take this and run with it and add it to svn it'd be peachy.
+
+Your MogileFS filenames should be of the format "/foo/bar/quux.gif"
+for this to work sensibly.
+
+I particularly proud of doing the range requests.
+
+It's annoying that the tracker can't give you file sizes though.
+
+The one big hack is to figure out directory paths - somewhat
+inefficiently it needs to go through every path to see what
+directories to show at the root mount point. It gets more efficient
+lower down though.
+
+Performance wise: it's not too bad, it's not too good. Don't throw
+away Samba yet.
+
+Many thanks to Foxtons Ltd. for letting me hack on this at work.
+
+Leon
