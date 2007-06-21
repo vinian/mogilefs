@@ -40,6 +40,3 @@
 * test new reaper
   http://rt.livejournal.org/Ticket/Display.html?id=3179
 
-* need tool that shows disk usage statistics on a per storage host basis
-  http://rt.livejournal.org/Ticket/Display.html?id=3784
-
