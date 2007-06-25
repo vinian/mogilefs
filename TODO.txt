@@ -10,6 +10,9 @@
 * parallel write-out to multiple mogstoreds
   http://rt.livejournal.org/Ticket/Display.html?id=351
 
+* mogstored startup check for AIO
+  http://rt.livejournal.org/Ticket/Display.html?id=414
+
 * device readonly state does not respect host state
   http://rt.livejournal.org/Ticket/Display.html?id=2373
 
