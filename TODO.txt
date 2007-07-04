@@ -43,3 +43,7 @@
 * test new reaper
   http://rt.livejournal.org/Ticket/Display.html?id=3179
 
+* API provides list_fids, but no way to find the FID for a given key.
+  Add API functionality to get the metadata given a domain+key.
+
+* Add checksumming to the storage and Fsck.
