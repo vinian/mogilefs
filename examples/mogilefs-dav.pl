@@ -264,3 +264,5 @@ sub _fixup_path {
 }
 
 1;
+
+# vim: filetype=perl softtabstop=4 expandtab
