@@ -43,3 +43,6 @@
 * test new reaper
   http://rt.livejournal.org/Ticket/Display.html?id=3179
 
+* mogilefs: marking a host as dead should reap all the fids, but does NOT
+  http://rt.livejournal.org/Ticket/Display.html?id=4355
+
