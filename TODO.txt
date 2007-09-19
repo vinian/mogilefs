@@ -46,3 +46,6 @@
 * mogilefs: marking a host as dead should reap all the fids, but does NOT
   http://rt.livejournal.org/Ticket/Display.html?id=4355
 
+* mogilefs: drain is excessively slow .. replicators drain only when BORED
+  http://rt.livejournal.org/Ticket/Display.html?id=4356
+
