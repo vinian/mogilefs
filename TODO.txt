@@ -49,3 +49,6 @@
 * mogilefs: drain is excessively slow .. replicators drain only when BORED
   http://rt.livejournal.org/Ticket/Display.html?id=4356
 
+* directory structure with large fids
+  http://rt.livejournal.org/Ticket/Display.html?id=4402
+
