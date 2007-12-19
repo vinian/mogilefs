@@ -1,0 +1,517 @@
+#!/usr/bin/perl -w
+
+=pod
+
+=head1 NAME
+
+mount-filepaths - A fuse perl script to mount a filepaths enabled mogile system
+
+=head1 SYNOPSIS
+
+mount-filepaths --tracker HOST:PORT --domain DOMAINNAME [ --class CLASSNNAME ] [ --file-perms FILEPERM ] [ --dir-perms DIRPERM ] [ --log LOGFILE ] [ --cache-size NUM ] [ --cache-age SECS ] [ --verbose ] [ --help ]
+
+=head1 DESCRIPTION
+
+This script mounts a FilePaths enabled MogileFS system to your local filesystem.  The FilePaths and MetaData plugins, found here:
+
+  http://search.cpan.org/~hachi/MogileFS-Plugin-FilePaths-0.02
+  http://search.cpan.org/~hachi/MogileFS-Plugin-MetaData-0.01
+
+are required for this script to work.  These plugins store directory hierarchy as well as file size (and in the future, arbitrary values, which would enable this script to allow symlink creation).
+
+The following system calls are supported:
+
+=over 4
+
+=item getattr
+
+=item getdir
+
+=item mkdir
+
+=item open
+
+=item write
+
+=item statfs
+
+=item read
+
+=item mknod
+
+=item unlink
+
+=item rename
+
+=back
+
+This means that you can create, open, write, rename and delete files.  You can create and descend directories.  You can get basic file information about both files and directories.
+
+This code is not production ready (see L<BUGS>) but it is functional.  As a test it has been used to create a directory structure on MogileFS via a local filesystem which was then populated with images and browsed by a gallery viewer (which itself created many thumbnail files in mogile).
+
+=head1 BUGS
+
+Sometimes the tracker connection will go away unexpectedly and this script will die, leaving the mount point mounted, but dead.  This needs to be addressed by detecting when the tracker has disconnected and creating a new connection.
+
+=head1 AUTHORS
+
+Garth Webb E<lt>garth@sixapart.comE<gt>
+
+=cut
+
+#--------------------------------------#
+# Dependencies
+
+use strict;
+
+use Fuse;
+
+use POSIX qw(ENOENT EISDIR EINVAL);
+
+use MogileFS::Client::FilePaths;
+use Getopt::Long;
+
+#--------------------------------------#
+# Constants
+
+use constant DEF_CLASS    => 'original';
+use constant DEF_TRACKER => '127.0.0.1:6001';
+use constant DEF_FILE_PERMS => 0666;
+use constant DEF_DIR_PERMS  => 0777;
+
+use constant DEF_CACHE_SIZE => 5_000_000;
+use constant DEF_CACHE_AGE  => 10;
+
+#--------------------------------------#
+# Global Variables
+
+our ($MOG, @TRACKER, $DOMAIN, $CLASS);
+our ($FILE_PERMS, $DIR_PERMS);
+our (%FILE_CACHE, $CACHE_SIZE, $CACHE_AGE) = (('/' => {size => 0, age => 0}));
+our ($VERBOSE, $LOG, $LOG_FH);
+our $START_TIME = time;
+
+#--------------------------------------#
+# Main Program
+
+my $help;
+GetOptions('tracker|t=s'  => \@TRACKER,
+           'domain|d=s'   => \$DOMAIN,
+           'class|c=s'    => \$CLASS,
+           'file-perms=s' => \$FILE_PERMS,
+           'dir-perms=s'  => \$DIR_PERMS,
+           'log=s'        => \$LOG,
+
+           'cache-size'   => \$CACHE_SIZE,
+           'cache-age'    => \$CACHE_AGE,
+
+           'verbose|v'    => \$VERBOSE,
+           'help|h|?'     => \$help,
+          );
+
+if ($help) {
+    help();
+    exit;
+}
+
+# Default to local trackers
+@TRACKER      = (DEF_TRACKER()) unless @TRACKER;
+$CLASS      ||= DEF_CLASS();
+$FILE_PERMS ||= DEF_FILE_PERMS();
+$DIR_PERMS  ||= DEF_DIR_PERMS();
+$CACHE_SIZE ||= DEF_CACHE_SIZE();
+$CACHE_AGE  ||= DEF_CACHE_AGE();
+
+my ($mountpoint) = @ARGV;
+
+unless ($DOMAIN) {
+    print STDERR "Error: Option '--domain' required\n";
+    exit;
+}
+unless ($mountpoint) {
+    print STDERR "Please supply a mount point\n";
+    exit;
+}
+
+# When running this script directly, it will run fusermount, which will in turn
+# re-run this script.  Hence the funky semantics.
+Fuse::main(
+	mountpoint  => $mountpoint,
+
+    # Supported calls
+    getattr     => "main::e_getattr",
+    getdir      => "main::e_getdir",
+    mkdir       => "main::e_mkdir",
+    open        => "main::e_open",
+    write       => "main::e_write",
+    statfs      => "main::e_statfs",
+    read        => "main::e_read",
+    mknod       => "main::e_mknod",
+    unlink      => "main::e_unlink",
+    rename      => "main::e_rename",
+
+    # Unsupported calls
+    readlink    => "main::e_readlink",
+    rmdir       => "main::e_rmdir",
+    symlink     => "main::e_symlink",
+    link        => "main::e_link",
+    chmod       => "main::e_chmod",
+    chown       => "main::e_chown",
+    truncate    => "main::e_truncate",
+    utime       => "main::e_utime",
+    flush       => "main::e_flush",
+    release     => "main::e_release",
+    fsync       => "main::e_fsync",
+    setxattr    => "main::e_setxattr",
+    getxattr    => "main::e_getxattr",
+    listxattr   => "main::e_listxattr",
+    removexattr => "main::e_removexattr",
+
+    threaded    => 0,
+);
+
+################################################################################
+
+#--------------------------------------#
+# Functions
+
+sub help {
+    my $prog = $0;
+    $prog =~ s!.*/!!g;
+
+    print STDERR qq{
+Usage: $prog [OPTIONS] --domain DOMAIN MOUNT_POINT
+
+Takes a FilePaths enabled MogileFS installation and mounts it via FUSE to the
+local filesystem.
+
+Options:
+    --domain, -d DOMAIN
+        The MogileFS domain to use when querying mogile.  This option is
+        required.
+
+    --tracker, -t HOST:PORT
+        This option can be given multiple times for every tracker configured in
+        your MogileFS pool.  If this option is not given, 'localhost:6001' is
+        assumed.
+
+    --class, -c CLASS
+        This is the class type for any files created while MogileFS is mounted.
+        If you want to support reading/writing more than one class of file, you
+        should mount MogileFS in multiple places, each with a different class
+        and have your app write files within the appropriate mount point.  If
+        this option is not given, defaults to 'original'.
+
+    --file-perms PERMS
+        The default file permissions for all files in the mounted MogileFS
+        filesystem.  Since MogilefS does not store this information currently
+        it must be faked.
+
+    --dir-perms PERMS
+        The default directory permissions for all directories in the mounted
+        MogileFS filesystem.  See --file-perms.
+
+};
+}
+
+sub logmsg {
+    my ($verb, $msg) = @_;
+    return if $verb and not $VERBOSE;
+
+    if ($LOG) {
+        unless ($LOG_FH) {
+            open($LOG_FH, '>', $LOG) or die "Can't write log '$LOG': $!\n";
+        }
+        print $LOG_FH $msg, "\n";
+    } else {
+        print STDERR $msg, "\n";
+    }
+}
+
+sub mog_instance {
+    return $MOG if $MOG;
+
+    my $MOG = MogileFS::Client::FilePaths->new(
+                  hosts  => \@TRACKER,
+                  domain => $DOMAIN,
+                );
+
+    return $MOG;
+}
+
+sub filename_fixup {
+    my ($file) = shift;
+
+    # Make sure we start everything from '/'
+    $file = '/' unless length($file);
+    $file = '/' if $file eq '.';
+    $file = '/'.$file unless $file =~ m!^/!;
+
+    return $file;
+}
+
+sub get_file_info {
+    my ($path) = @_;
+
+    my $mog = mog_instance();
+
+    if ($path eq '/') {
+        return {name         => '/',
+                is_directory => 1};
+    }
+
+    my ($dir, $file) = $path =~ m!^(.*/)([^/]+)$!;
+
+    my @files = $mog->list($dir);
+    foreach my $finfo (@files) {
+        return $finfo if $finfo->{name} eq $file;
+    }
+
+    return;
+}
+
+sub get_file_data {
+    my ($file) = @_;
+
+    my $entry = $FILE_CACHE{$file};
+    my $meta  = $FILE_CACHE{'/'};
+
+    if ($entry) {
+        # See if this data is too old
+        if ((time - $entry->{created}) < $CACHE_AGE) {
+            logmsg(1, "-- get_file_data: hit");
+
+            # If its still valid, return it
+            return $entry->{data};
+        } else {
+            logmsg(1, "-- get_file_data: miss - expired");
+
+            rm_file_cache($file);
+        }
+    }
+
+    my $mog = mog_instance();
+    my $cont = $mog->get_file_data($file);
+    my $size = length($$cont);
+
+    if ($meta->{size} + $size > $CACHE_SIZE) {
+        # If adding this would go beyond our max cache size, delete things until
+        # we can fit it
+        foreach my $f (sort {$a->{age} <=> $b->{age}} keys %FILE_CACHE) {
+            next if $f eq '/';
+
+            my $rm_size = rm_file_cache($f);
+
+            logmsg(1, "-- get_file_data: purging - $rm_size bytes");
+
+            last if $meta->{size} + $size < $CACHE_SIZE;
+        }
+    }
+
+    logmsg(1, "-- get_file_data: added - $size bytes");
+
+    # Create a new entry
+    $FILE_CACHE{$file} = {created => time,
+                          size    => $size,
+                          data    => $cont};
+    $meta->{size} += $size;
+
+    return $cont;
+}
+
+sub rm_file_cache {
+    my ($file) = @_;
+    my $entry = delete $FILE_CACHE{$file};
+    return unless $entry;
+
+    # Decrement how large our cache size is
+    my $size = $entry->{size};
+    $FILE_CACHE{'/'}->{size} -= $size;
+
+    return $size;
+}
+
+sub e_getattr {
+    my ($file) = filename_fixup(shift);
+
+    logmsg(1, "e_getattr: $file");
+
+    my $finfo = get_file_info($file);
+
+	return -ENOENT() unless defined $finfo;
+	my ($size) = $finfo->{size} || 0;
+    my $modes;
+
+    # Cook some permissions since we don't store this information in mogile
+    if ($finfo->{is_directory}) {
+        ($modes) = (0040 << 9) + $DIR_PERMS;
+    } else {
+        ($modes) = (0100 << 9) + $FILE_PERMS;
+    }
+
+	my ($dev, $ino, $rdev, $blocks, $gid, $uid, $nlink, $blksize) = (0,0,0,1,0,0,1,1024);
+	my ($atime, $ctime, $mtime);
+	$atime = $ctime = $mtime = $START_TIME;
+
+	# 2 possible types of return values:
+	# return -ENOENT(); # or any other error you care to
+	# print(join(",",($dev,$ino,$modes,$nlink,$uid,$gid,$rdev,$size,$atime,$mtime,$ctime,$blksize,$blocks)),"\n");
+
+	return ($dev,$ino,$modes,$nlink,$uid,$gid,$rdev,$size,$atime,$mtime,$ctime,$blksize,$blocks);
+}
+
+sub e_getdir {
+    my ($file) = filename_fixup(shift);
+
+    logmsg(1, "e_getdir: $file");
+
+    my $mog = mog_instance();
+    my @files = $mog->list($file);
+
+    return ('.', '..', map { $_->{name} } @files),0;
+}
+
+sub e_mkdir {
+	my ($file) = filename_fixup(shift);
+
+    logmsg(1, "e_mkdir: $file");
+
+    my $mog = mog_instance();
+
+    # There is no explicit mkdir in the FilePaths plugin for mogile.  So, create
+    # a temp file in the directory we want to force auto-vivification of the
+    # directories
+    my $tmp_file = $file.'/'.'.create';
+
+    my $fh = $mog->new_file($tmp_file, $CLASS);
+    print $fh '0';
+
+    unless ($fh->close) {
+        logmsg(0, "Error writing file: ".$mog->errcode.': '.$mog->errstr);
+        return -1
+    }
+
+    $mog->delete($tmp_file);
+
+    return 0;
+}
+
+sub e_open {
+    # VFS sanity check; it keeps all the necessary state, not much to do here.
+    my ($file) = filename_fixup(shift);
+
+    logmsg(1, "e_open: $file");
+
+    my $finfo = get_file_info($file);
+
+    return -ENOENT() unless $finfo;
+    return -EISDIR() if $finfo->{is_directory};
+
+    return 0;
+}
+
+sub e_read {
+    # return an error numeric, or binary/text string.  (note: 0 means EOF, "0"
+    # will give a byte (ascii "0") to the reading program)
+    my ($file) = filename_fixup(shift);
+    my ($buf, $off) = @_;
+
+    logmsg(1, "e_read: $file pos=$off len=$buf");
+
+    my $finfo = get_file_info($file);
+
+    return -ENOENT() unless $finfo;
+    return -EINVAL() if $off > $finfo->{size};
+    return 0 if $off == $finfo->{size};
+
+    my $cont = get_file_data($file);
+
+    return substr($$cont, $off, $buf);
+}
+
+sub e_write {
+    my ($file) = filename_fixup(shift);
+    my ($buf, $offset) = @_;
+
+    logmsg(1, "e_write: $file pos=$offset len=".length($buf));
+
+    my $finfo = get_file_info($file);
+
+    return -ENOENT() unless $finfo;
+
+    my $cont = get_file_data($file);
+
+    substr($$cont, $offset, length($buf), $buf);
+
+    my $mog = mog_instance();
+    $mog->store_content($file, $CLASS, $cont);
+    rm_file_cache($file);
+
+    return length($buf);
+}
+
+sub e_mknod {
+    my ($file) = filename_fixup(shift);
+
+    logmsg(1, "e_mknod: $file");
+
+    my $mog = mog_instance();
+    my $fh = $mog->new_file($file, $CLASS);
+    print $fh "\n";
+    unless ($fh->close) {
+        my ($code, $str) = ($mog->errcode || -1, $mog->errstr || '');
+        logmsg(0, "Error creating file:$code: $str");
+        $! = $str;
+        $? = $code;
+        return -1;
+    }
+
+    return 0;
+}
+
+sub e_unlink {
+    my ($file) = filename_fixup(shift);
+
+    logmsg(1, "e_unlink: $file");
+
+    my $mog = mog_instance();
+    $mog->delete($file);
+
+    return 0;
+}
+
+sub e_rename {
+    my ($old) = filename_fixup(shift);
+    my ($new) = filename_fixup(shift);
+
+    logmsg(1, "e_rename: $old -> $new");
+
+    my $mog = mog_instance();
+
+    # Rename this file
+    $mog->rename($old, $new);
+
+    return 0;
+}
+
+sub e_statfs {
+    logmsg(1, "e_statfs: $_[0]");
+    return 255, 1, 1, 1, 1, 2
+}
+
+sub e_readlink    { logmsg(1, "e_readlink: $_[0]");    0; }
+sub e_rmdir       { logmsg(1, "e_rmdir: $_[0]");       0; }
+sub e_symlink     { logmsg(1, "e_symlink: $_[0]");     0; }
+sub e_link        { logmsg(1, "e_link: $_[0]");        0; }
+sub e_chmod       { logmsg(1, "e_chmod: $_[0]");       0; }
+sub e_chown       { logmsg(1, "e_chown: $_[0]");       0; }
+sub e_truncate    { logmsg(1, "e_truncate: $_[0]");    0; }
+sub e_utime       { logmsg(1, "e_utime: $_[0]");       0; }
+sub e_flush       { logmsg(1, "e_flush: $_[0]");       0; }
+sub e_release     { logmsg(1, "e_release: $_[0]");     0; }
+sub e_fsync       { logmsg(1, "e_fsync: $_[0]");       0; }
+sub e_setxattr    { logmsg(1, "e_setxattr: $_[0]");    0; }
+sub e_getxattr    { logmsg(1, "e_getxattr: $_[0]");    0; }
+sub e_listxattr   { logmsg(1, "e_listxattr: $_[0]");   0; }
+sub e_removexattr { logmsg(1, "e_removexattr: $_[0]"); 0; }
+
