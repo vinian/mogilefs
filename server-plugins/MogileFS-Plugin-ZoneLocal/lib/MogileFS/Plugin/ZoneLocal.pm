@@ -40,6 +40,7 @@ sub load {
 sub unload {
     # remove our hooks
     MogileFS::unregister_global_hook( 'cmd_get_paths_order_devices' );
+    MogileFS::unregister_global_hook( 'cmd_create_open_order_devices' );
 
     return 1;
 }
