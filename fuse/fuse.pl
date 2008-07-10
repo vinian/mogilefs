@@ -11,8 +11,8 @@ use POSIX qw(ENOENT EISDIR EINVAL);
 my $DEBUG = 0;
 
 my $mogilefs = MogileFS::Client->new(
-    domain  => 'resources',
-    hosts   => [ 'cluster7:6001', 'cluster10:6001' ],
+    domain  => 'domain1',
+    hosts   => [ '127.0.0.1:7001', ],
     timeout => 5,
 );
 $mogilefs->readonly(1);
