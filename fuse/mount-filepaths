@@ -204,7 +204,7 @@ Options:
 
     --file-perms PERMS
         The default file permissions for all files in the mounted MogileFS
-        filesystem.  Since MogilefS does not store this information currently
+        filesystem.  Since MogileFS does not store this information currently
         it must be faked.
 
     --dir-perms PERMS
