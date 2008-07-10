@@ -1,0 +1,6 @@
+To install/run this script, you will need these packages installed:
+
+  fuse-utils
+  libfuse-perl
+  liblist-moreutils-perl
+  libpath-class-perl
