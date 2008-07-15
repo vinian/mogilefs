@@ -25,6 +25,7 @@ mogtool -- Inject/extract data to/from a MogileFS installation
                      --description="Description" \
                      --receipt="foo@bar.com, baz@bar.com" \
                      --concurrent=5 --chunksize=32M \
+                     --pathcount=2 \
                      somehugefile thefilekey
 
     $ mogtool extract thefilekey thenewfile.tgz
@@ -147,6 +148,10 @@ before overwriting an existing file.
 If on, we do a full MD5 verification of every chunk after it is replicated.  This
 can take a while on large files!
 
+=item --pathcount
+
+Verify that every chunk gets replicated correctly at least this many times.
+
 =item --description=<text>
 
 Specifies a description for this file.  Optional, but assists in reporting and
@@ -253,6 +258,10 @@ Specifies the key of the file to delete.
 =head1 LOCATE OPTIONS
 
 =over 4
+
+=item --pathcount
+
+Try to locate at least this many paths.
 
 =item --verify
 
@@ -574,6 +583,7 @@ abortWithUsage() unless
                'verify'        => \$opts{verify},
                'description=s' => \$opts{des},
                'concurrent=i'  => \$opts{concurrent},
+               'pathcount=i'   => \$opts{pathcount},
 
                # extract options
                'asfile'        => \$opts{asfile},
@@ -843,7 +853,7 @@ MSG
                 $emit->($cnum);
                 next;
             }
-            my @paths = grep { defined $_ } $mogfs->get_paths($opts{big} ? "$key,$cnum" : "$key", 1);
+            my @paths = grep { defined $_ } $mogfs->get_paths($opts{big} ? "$key,$cnum" : "$key", {noverify=>1,pathcount=>$opts{pathcount}});
             unless (@paths) {
                 print "Error: reaped child $pid for chunk $cnum but no paths exist... Retrying...\n";
                 $emit->($cnum);
@@ -985,13 +995,14 @@ MSG
         # now iterate over each and get the paths
         foreach my $num (keys %still_need) {
             my $dkey = $opts{big} ? "$key,$num" : $key;
-            my @npaths = grep { defined $_ } $mogfs->get_paths($dkey, 1);
+            my @npaths = grep { defined $_ } $mogfs->get_paths($dkey,  {noverify=>1,pathcount=>$opts{pathcount}});
 
             unless (@npaths) {
                 error("FAILURE: chunk $num has no paths at all.", ERR_FATAL);
             }
 
-            if (scalar(@npaths) >= 2) {
+            $opts{pathcount} ||= 2;
+            if (scalar(@npaths) >= $opts{pathcount}) {
                 # okay, this one's replicated, actually verify the paths
                 foreach my $path (@npaths) {
                     if ($opts{verify}) {
@@ -1020,8 +1031,8 @@ MSG
                     push @{$paths{$num} ||= []}, $path;
                 }
 
-                # now make sure %paths contains at least 2 verified
-                next unless scalar(@{$paths{$num} || []}) >= 2;
+                # now make sure %paths contains at least pathcount verified
+                next unless scalar(@{$paths{$num} || []}) >= $opts{pathcount};
                 delete $still_need{$num};
             }
         }
@@ -1059,8 +1070,8 @@ INFO
         # verify info file
         print "Waiting for info file replication...\n";
         while (1) {
-            my @paths = $mogfs->get_paths("_big_info:$key", 1);
-            next unless scalar(@paths) >= 2;
+            my @paths = $mogfs->get_paths("_big_info:$key", {noverify=>1,pathcount=>$opts{pathcount}});
+            next unless scalar(@paths) >= $opts{pathcount};
             foreach my $path (@paths) {
                 my $data = get($path);
                 error("       FATAL: content mismatch on $path", ERR_FATAL)
@@ -1253,6 +1264,7 @@ sub locate {
     abortWithUsage("key required to locate") unless $key;
     $opts{verify} = 1 unless $opts{verify};
     $opts{bigfile} = 0 unless $opts{big};
+    $opts{pathcount} = 2 unless $opts{pathcount};
    
     my $dkey = $key;
     $dkey = "_big_info:$key" if $opts{big};
@@ -1260,7 +1272,7 @@ sub locate {
     # list all paths for the file
     my $ct = 0;
     my @paths = [];
-    my @paths = grep { defined $_ } $mogfs->get_paths($dkey, $opts{verify} );
+    my @paths = grep { defined $_ } $mogfs->get_paths($dkey, {noverify=>$opts{verify},pathcount=>$opts{pathcount}} );
     if(@paths == 0 && $mogfs->errstr =~ /unknown_key/) {
         error("Error: bigfile $key doesn't exist (or did you force --bigfile?)", ERR_MISSING) if $opts{big};
         error("Error: file $key doesn't exist (or did you forget --bigfile?)", ERR_MISSING);
