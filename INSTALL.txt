@@ -1,0 +1,64 @@
+Building and Installing instructions for MogileFS
+=================================================
+
+MogileFS can be built as several packages for later installation or
+installation on several machines. It can also be built and installed
+directly on this machine without packaging. Instructions are given
+for both techniques.
+
+0. Prerequisites
+================
+
+Before continuing, make sure you have the following prerequisite
+packages installed:
+
+-  perl
+-  libcompress-zlib-perl
+-  libio-stringy-perl
+-  libstring-crc32-perl
+-  libwww-perl
+-  debhelper  (for building debian packages)
+-  dpkg-dev   (for building debian packages)
+-  fakeroot   (for building debian packages)
+
+1. Building Debian packages
+===========================
+
+A script 'bin/build-all-debian.sh' will build all debian packages
+and place them into the newly created 'packages' directory. The
+packages are:
+
+-  libmogilefs-perl
+-  mogilefs-utils
+-  mogilefsd
+-  mogstored
+
+The mogilefs-utils package can't be built unless libmogilefs-perl is
+already installed. So the bin/build-all-debian.sh script needs to be
+run twice, as follows:
+
+$  bin/build-all-debian.sh
+$  sudo dpkg -i packages/libmogilefs-perl*.deb
+$  bin/build-all-debian.sh
+
+
+2. Building and installing without packaging
+============================================
+
+This technique uses the standard Perl make/install process.
+You can use the PREFIX= argument to set the directory into which
+MogileFS will be installed. The default is $HOME/local.
+
+**
+** Note that some tests might fail; this doesn't necessarily mean
+** that MogileFS won't work.
+**
+
+A script 'bin/build-all.sh' automates the build and install process.
+Run it as follows:
+
+$  PREFIX=$HOME/local bin/build-all.sh
+
+If you want to install as root, say, do something like this instead:
+
+$  sudo PREFIX=/usr/local bin/build-all.sh
