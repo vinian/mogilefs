@@ -612,6 +612,9 @@ unless ($opts{trackers} && $opts{domain}) {
     abortWithUsage("--trackers and --domain configuration required");
 }
 
+# Set default option values
+$opts{pathcount} ||= 2;
+
 eval qq{
     use MogileFS::Client; 1
 } or die "Failed to load MogileFS::Client module: $@\n";
@@ -1001,7 +1004,6 @@ MSG
                 error("FAILURE: chunk $num has no paths at all.", ERR_FATAL);
             }
 
-            $opts{pathcount} ||= 2;
             if (scalar(@npaths) >= $opts{pathcount}) {
                 # okay, this one's replicated, actually verify the paths
                 foreach my $path (@npaths) {
@@ -1264,8 +1266,7 @@ sub locate {
     abortWithUsage("key required to locate") unless $key;
     $opts{verify} = 1 unless $opts{verify};
     $opts{bigfile} = 0 unless $opts{big};
-    $opts{pathcount} = 2 unless $opts{pathcount};
-   
+
     my $dkey = $key;
     $dkey = "_big_info:$key" if $opts{big};
     
