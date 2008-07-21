@@ -878,9 +878,11 @@ MSG
     # setup compression stuff
     my $dogzip = 0;
     my $zlib;
+    my $writebuf = '';
+
     if ($opts{gzip}) {
         # if they turned gzip on we may or may not need this stream, so make it
-        $zlib = deflateInit()
+        $zlib = gzopen(\$writebuf, "w")
             or error("Error: unable to create gzip deflation stream", ERR_FATAL);
     }
 
@@ -901,11 +903,12 @@ MSG
 
         # now run it through the deflation stream before we process it here
         if ($dogzip) {
-            my ($out, $status) = $zlib->deflate($readbuf);
+            my $bytestaken = $zlib->gzwrite($readbuf);
             error("Error: Deflation failure processing stream", ERR_FATAL)
-                unless $status == Z_OK;
-            $readbuf = $out;
+                unless $bytestaken == $rv;
+            $readbuf = $writebuf;
             $rv = length $readbuf;
+            $writebuf = '';
 
             # we don't always get a chunk from deflate
             next unless $rv;
@@ -949,12 +952,12 @@ MSG
 
     # now we need to flush the gzip engine
     if ($dogzip) {
-        my ($out, $status) = $zlib->flush;
+        my $retcode = $zlib->gzclose();
         error("Error: Deflation failure processing stream", ERR_FATAL)
-            unless $status == Z_OK;
-        $buf .= $out;
-        $bufsize += length $out;
-        $sum += length $out;
+            unless $retcode == 0;
+        $buf .= $writebuf;
+        $bufsize += length $writebuf;
+        $sum += length $writebuf;
     }
 
     # final piece
